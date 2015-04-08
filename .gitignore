@@ -1,0 +1,6 @@
+WPF Utilities/obj/
+WPF Utilities/bin/
+Unit Tests/bin/Debug/WPFUtilitiesTests.pdb
+Unit Tests/obj/
+*.suo
+Unit Tests/bin/

@@ -17,12 +17,12 @@ namespace WPFUtilities.Converters.Base
         /// <summary>
         /// Default value to return if value provided to the Convert method is invalid
         /// </summary>
-        private To _defaultTo;
+        private To m_defaultTo;
 
         /// <summary>
         /// Default value to return if value provided to the ConvertBack method is invalid
         /// </summary>
-        private From _defaultFrom;
+        private From m_defaultFrom;
 
         /// <summary>
         /// Default constructor, Convert and ConvertBack will return default(To)
@@ -45,8 +45,8 @@ namespace WPFUtilities.Converters.Base
         /// <param name="defFrom">The value to return when the value provided to ConvertBack is invalid</param>
         public BaseConverter(To defTo, From defFrom)
         {
-            _defaultTo = defTo;
-            _defaultFrom = defFrom;
+            m_defaultTo = defTo;
+            m_defaultFrom = defFrom;
         }
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace WPFUtilities.Converters.Base
         {
             if (value == null || !(value is From) || !(targetType.IsAssignableFrom(typeof(To))))
             {
-                return _defaultTo;
+                return m_defaultTo;
             }
 
             return this.ConvertEx((From)value, parameter, culture);
@@ -79,7 +79,7 @@ namespace WPFUtilities.Converters.Base
         {
             if (value == null || !(value is To) || !(targetType.IsAssignableFrom(typeof(From))))
             {
-                return _defaultFrom;
+                return m_defaultFrom;
             }
 
             return this.ConvertBackEx((To)value, parameter, culture);

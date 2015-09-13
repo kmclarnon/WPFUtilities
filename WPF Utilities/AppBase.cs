@@ -17,23 +17,23 @@ namespace WPFUtilities
         
         public bool EnableDebugBindings
         {
-            get { return _enableDebugBindings; }
+            get { return m_enableDebugBindings; }
             set
             {
-                if(_enableDebugBindings != value)
+                if(m_enableDebugBindings != value)
                 {
-                    _enableDebugBindings = value;
+                    m_enableDebugBindings = value;
                     this.OnEnableDebugBindingsChanged();
                 }
             }
         }
 
-        private bool _enableDebugBindings;
-        private bool _started = false;
+        private bool m_enableDebugBindings;
+        private bool m_started = false;
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            _started = true;
+            m_started = true;
             #if(DEBUG)
             if (this.EnableDebugBindings)
                 this.SetDebugTrace();
@@ -43,7 +43,7 @@ namespace WPFUtilities
 
         protected void OnEnableDebugBindingsChanged()
         {
-            if (this.EnableDebugBindings && _started)
+            if (this.EnableDebugBindings && m_started)
                 this.SetDebugTrace();
             else
                 PresentationTraceSources.Refresh();

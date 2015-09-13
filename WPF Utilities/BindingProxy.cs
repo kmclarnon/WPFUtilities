@@ -31,6 +31,10 @@ namespace WPFUtilities
             set { SetValue(DataProperty, value); }
         }
 
+        /// <summary>
+        /// Creates a new instance of the Freezable derived class
+        /// </summary>
+        /// <returns>A new instance of the BindingProxy class</returns>
         protected override Freezable CreateInstanceCore()
         {
             return new BindingProxy();

@@ -25,17 +25,17 @@ namespace WPFUtilities
         /// <summary>
         /// Dictionary to contain command bindings created by the GetCommand function
         /// </summary>
-        private Dictionary<string, RelayCommand> _commands = new Dictionary<string, RelayCommand>();
+        private Dictionary<string, RelayCommand> m_commands = new Dictionary<string, RelayCommand>();
 
         /// <summary>
         /// Dictionary to contain properties generated with SetProperty&lt;T&gt;.
         /// </summary>
-        protected Dictionary<string, object> _properties = new Dictionary<string, object>();
+        protected Dictionary<string, object> m_properties = new Dictionary<string, object>();
 
         /// <summary>
         /// A set of user-supplied objects that are storage for the view model properties
         /// </summary>
-        protected HashSet<object> _propertyModels = new HashSet<object>();
+        protected HashSet<object> m_propertyModels = new HashSet<object>();
 
         /// <summary>
         /// Initializes a new BaseVM
@@ -62,18 +62,7 @@ namespace WPFUtilities
         /// <param name="property">The name of the property that is changing. This defaults to [CallerMemberName]</param>
         protected void NotifyPropertyChanged([CallerMemberName] string property = "")
         {
-            if (this.PropertyChanged != null)
-                this.PropertyChanged(this, new PropertyChangedEventArgs(property));
-        }
-
-        /// <summary>
-        /// Provides a convenient way to send notifications outside of a property by taking an
-        /// member expression which then supports refactoring
-        /// </summary>
-        /// <param name="selector">The member expression that selects the property</param>
-        protected void NotifyPropertyChanged<T>(Expression<Func<T>> selector)
-        {
-            this.NotifyPropertyChanged(ExpressionMethods.GetName(selector));
+            this.PropertyChanged.SafeInvoke(this, new PropertyChangedEventArgs(property));
         }
         #endregion
 
@@ -87,33 +76,21 @@ namespace WPFUtilities
             if (model == null)
                 throw new ArgumentNullException("model");
             // first check that this model has not been added already
-            if (_propertyModels.Contains(model))
+            if (m_propertyModels.Contains(model))
                 throw new ArgumentException("Model has already been registered");
             // next check that the model does not conflic with any of the models already added
             var modProps = model.GetType().GetProperties();
-            var curProps = _propertyModels.SelectMany(o => o.GetType().GetProperties());
+            var curProps = m_propertyModels.SelectMany(o => o.GetType().GetProperties());
             foreach (var p in modProps)
             {
                 if (curProps.Where(o => o.PropertyType == p.PropertyType && o.Name == p.Name).Any())
                     throw new ArgumentException(model.ToString() + " has properties that conflict with existing registered models");
             }
 
-            _propertyModels.Add(model);
+            m_propertyModels.Add(model);
         }
 
         #region Property Setters
-        /// <summary>
-        /// Sets the apropriate property either on a registered model or internally.  
-        /// <b>For use outside of property setters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to set</typeparam>
-        /// <param name="newValue">The value to set the property too</param>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        protected void SetProperty<T>(T newValue, Expression<Func<T>> selector)
-        {
-            this.SetProperty(newValue, true, (x => { }), (x => { }), (x => true), ExpressionMethods.GetName(selector));
-        }
-
         /// <summary>
         /// Sets the apropriate property either on a registered model or internally.  
         /// <b>For use in property setters and getters only</b>
@@ -128,19 +105,6 @@ namespace WPFUtilities
 
         /// <summary>
         /// Sets the apropriate property either on a registered model or internally.  
-        /// <b>For use outside of property setters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to set</typeparam>
-        /// <param name="newValue">The value to set the property too</param>
-        /// <param name="allowNull">Whether or not this property can be set to null</param>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        protected void SetProperty<T>(T newValue, bool allowNull, Expression<Func<T>> selector)
-        {
-            this.SetProperty(newValue, allowNull, (x => { }), (x => { }), (x => true), ExpressionMethods.GetName(selector));
-        }
-
-        /// <summary>
-        /// Sets the apropriate property either on a registered model or internally.  
         /// <b>For use in property setters and getters only</b>
         /// </summary>
         /// <typeparam name="T">The type of the property to set</typeparam>
@@ -150,20 +114,6 @@ namespace WPFUtilities
         protected void SetProperty<T>(T newValue, bool allowNull, [CallerMemberName] string propertyName = "")
         {
             this.SetProperty(newValue, allowNull, (x => { }), (x => { }), (x => true), propertyName);
-        }
-
-        /// <summary>
-        /// Sets the apropriate property either on a registered model or internally.  
-        /// <b>For use outside of property setters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to set</typeparam>
-        /// <param name="newValue">The value to set the property too</param>
-        /// <param name="allowNull">Whether or not this property can be set to null</param>
-        /// <param name="preceeding">Action to take before setting the property.  Recieves the new value as a parameter</param>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        protected void SetProperty<T>(T newValue, bool allowNull, Action<T> preceeding, Expression<Func<T>> selector)
-        {
-            this.SetProperty(newValue, allowNull, preceeding, (x => { }), (x => true), ExpressionMethods.GetName(selector));
         }
 
         /// <summary>
@@ -182,21 +132,6 @@ namespace WPFUtilities
 
         /// <summary>
         /// Sets the apropriate property either on a registered model or internally.  
-        /// <b>For use outside of property setters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to set</typeparam>
-        /// <param name="newValue">The value to set the property too</param>
-        /// <param name="allowNull">Whether or not this property can be set to null</param>
-        /// <param name="preceeding">Action to take before setting the property.  Recieves the new value as a parameter</param>
-        /// <param name="following">Action to take after setting the property.  Recieves the old value as a parameter</param>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        protected void SetProperty<T>(T newValue, bool allowNull, Action<T> preceeding, Action<T> following, Expression<Func<T>> selector)
-        {
-            this.SetProperty(newValue, allowNull, preceeding, following, (x => true), ExpressionMethods.GetName(selector));
-        }
-
-        /// <summary>
-        /// Sets the apropriate property either on a registered model or internally.  
         /// <b>For use in property setters and getters only</b>
         /// </summary>
         /// <typeparam name="T">The type of the property to set</typeparam>
@@ -208,23 +143,6 @@ namespace WPFUtilities
         protected void SetProperty<T>(T newValue, bool allowNull, Action<T> preceeding, Action<T> following, [CallerMemberName] string propertyName = "")
         {
             this.SetProperty(newValue, allowNull, preceeding, following, (x => true), propertyName);
-        }
-
-        /// <summary>
-        /// Sets the apropriate property either on a registered model or internally.  
-        /// <b>For use outside of property setters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to set</typeparam>
-        /// <param name="newValue">The value to set the property too</param>
-        /// <param name="allowNull">Whether or not this property can be set to null</param>
-        /// <param name="preceeding">Action to take before setting the property.  Recieves the new value as a parameter</param>
-        /// <param name="following">Action to take after setting the property.  Recieves the old value as a parameter</param>
-        /// <param name="validator">Predicate that determines whether the given new value is valid.  
-        /// If not, the property is not set, however the preceeding action is still invoked</param>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        protected void SetProperty<T>(T newValue, bool allowNull, Action<T> preceeding, Action<T> following, Predicate<T> validator, Expression<Func<T>> selector)
-        {
-            this.SetProperty(newValue, allowNull, preceeding, following, validator, ExpressionMethods.GetName(selector));
         }
 
         /// <summary>
@@ -250,7 +168,7 @@ namespace WPFUtilities
 
             // determine what our target is
             // properties could be backed by this base class or by a registered model
-            var models = _propertyModels.Where(o => o.GetType().GetProperties()
+            var models = m_propertyModels.Where(o => o.GetType().GetProperties()
                 .Where(p => p.Name == propertyName && p.PropertyType == typeof(T)).Any());
             if (models.Any())
             {
@@ -273,12 +191,10 @@ namespace WPFUtilities
                 if (validator != null && !validator(newValue))
                     return;
                 // invoke our actions in the appropriate order
-                if (preceeding != null)
-                    preceeding(newValue);
+                preceeding.SafeInvoke(newValue);
                 propertySetter();
                 this.NotifyPropertyChanged(propertyName);
-                if (following != null)
-                    following(oldVal);
+                following.SafeInvoke(oldVal);
             }
         }
 
@@ -292,12 +208,13 @@ namespace WPFUtilities
         /// <param name="propertySetter">The result action that performs the appropriate setting. Will never be null</param>
         /// <param name="oldVal">The old value of the property</param>
         /// <returns>True if invoking propertySetter would change the value of the property</returns>
-        private bool GetModelPropertySetter<T>(T newValue, object model,
-            string propertyName, out Action propertySetter, out T oldVal)
+        private bool GetModelPropertySetter<T>(T newValue, object model, string propertyName, out Action propertySetter, out T oldVal)
         {
+            // default values
             propertySetter = (() => { });
             oldVal = default(T);
 
+            // retrieve the property and value by name
             var prop = model.GetType().GetProperty(propertyName);
             if (prop == null)
                 throw new InvalidOperationException("Could not retrieve expected model property");
@@ -340,19 +257,18 @@ namespace WPFUtilities
         /// <param name="propertySetter">The result action that performs the appropriate setting</param>
         /// <param name="oldVal">The old value of the property</param>
         /// <returns>True if invoking propertySetter would change the value of the property</returns>
-        private bool GetInternalPropertySetter<T>(T newValue, string propertyName,
-            out Action propertySetter, out T oldVal)
+        private bool GetInternalPropertySetter<T>(T newValue, string propertyName, out Action propertySetter, out T oldVal)
         {
             propertySetter = (() => { });
             oldVal = default(T);
 
             object res;
-            if (_properties.TryGetValue(propertyName, out res))
+            if (m_properties.TryGetValue(propertyName, out res))
             {
                 oldVal = (T)res;
                 if (oldVal == null)
                 {
-                    propertySetter = (() => _properties[propertyName] = newValue);
+                    propertySetter = (() => m_properties[propertyName] = newValue);
                     return true;
                 }
                 else
@@ -363,14 +279,14 @@ namespace WPFUtilities
                     {
                         if (compRes.CompareTo(newValue) != 0)
                         {
-                            propertySetter = (() => _properties[propertyName] = newValue);
+                            propertySetter = (() => m_properties[propertyName] = newValue);
                             return true;
                         }
                     }
                     // fall back on objet equality
                     else if (!res.Equals(newValue))
                     {
-                        propertySetter = (() => _properties[propertyName] = newValue);
+                        propertySetter = (() => m_properties[propertyName] = newValue);
                         return true;
                     }
                 }
@@ -378,7 +294,7 @@ namespace WPFUtilities
             // create the property if it doesn't already exist
             else
             {
-                propertySetter = (() => _properties[propertyName] = newValue);
+                propertySetter = (() => m_properties[propertyName] = newValue);
                 return true;
             }
 
@@ -390,19 +306,6 @@ namespace WPFUtilities
         #region Property Getters
         /// <summary>
         /// Gets the value associated with this property.
-        /// <b>For use outside of property setters and getters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to get</typeparam>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        /// <returns>The value of the given property</returns>
-        protected T GetProperty<T>(Expression<Func<T>> selector)
-        {
-            return this.GetProperty<T>((() => { }), (x => { }), (x => x), ExpressionMethods.GetName(selector));
-        }
-
-        /// <summary>
-        /// Gets the value associated with this property.
-        /// <b>For use in property setters and getters only</b>
         /// </summary>
         /// <typeparam name="T">The type of the property to get</typeparam>
         /// <param name="propertyName">The name of the property to retrieve.  Supplied by CallerMemberName</param>
@@ -414,20 +317,6 @@ namespace WPFUtilities
 
         /// <summary>
         /// Gets the value associated with this property.
-        /// <b>For use outside of property setters and getters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to get</typeparam>
-        /// <param name="preceeding">Action to invoke before the property value is retrieved</param>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        /// <returns>The value of the given property</returns>
-        protected T GetProperty<T>(Action preceeding, Expression<Func<T>> selector)
-        {
-            return this.GetProperty<T>(preceeding, (x => { }), (x => x), ExpressionMethods.GetName(selector));
-        }
-
-        /// <summary>
-        /// Gets the value associated with this property.
-        /// <b>For use in property setters and getters only</b>
         /// </summary>
         /// <typeparam name="T">The type of the property to get</typeparam>
         /// <param name="preceeding">Action to invoke before the property value is retrieved</param>
@@ -440,21 +329,6 @@ namespace WPFUtilities
 
         /// <summary>
         /// Gets the value associated with this property.
-        /// <b>For use outside of property setters and getters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to get</typeparam>
-        /// <param name="preceeding">Action to invoke before the property value is retrieved</param>
-        /// <param name="following">Action to be invoked after the property value is retrieved. Recieves the retrieved value as an argument</param>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        /// <returns>The value of the given property</returns>
-        protected T GetProperty<T>(Action preceeding, Action<T> following, Expression<Func<T>> selector)
-        {
-            return this.GetProperty(preceeding, following, (x => x), ExpressionMethods.GetName(selector));
-        }
-
-        /// <summary>
-        /// Gets the value associated with this property.
-        /// <b>For use in property setters and getters only</b>
         /// </summary>
         /// <typeparam name="T">The type of the property to get</typeparam>
         /// <param name="preceeding">Action to invoke before the property value is retrieved</param>
@@ -468,22 +342,6 @@ namespace WPFUtilities
 
         /// <summary>
         /// Gets the value associated with this property.
-        /// <b>For use outside of property setters and getters</b>
-        /// </summary>
-        /// <typeparam name="T">The type of the property to get</typeparam>
-        /// <param name="preceeding">Action to invoke before the property value is retrieved</param>
-        /// <param name="following">Action to be invoked after the property value is retrieved. Recieves the retrieved value as an argument</param>
-        /// <param name="modifier">Used to modify the returned value without actually setting the underlying property</param>
-        /// <param name="selector">The expression that selects the appropriate property</param>
-        /// <returns>The value of the given property</returns>
-        protected T GetProperty<T>(Action preceeding, Action<T> following, Func<T, T> modifier, Expression<Func<T>> selector)
-        {
-            return this.GetProperty(preceeding, following, modifier, ExpressionMethods.GetName(selector));
-        }
-
-        /// <summary>
-        /// Gets the value associated with this property.
-        /// <b>For use in property setters and getters only</b>
         /// </summary>
         /// <typeparam name="T">The type of the property to get</typeparam>
         /// <param name="preceeding">Action to invoke before the property value is retrieved</param>
@@ -499,10 +357,11 @@ namespace WPFUtilities
             // we need to get the property, which may either exist in one of the registered models,
             // in our internal properties dictionary, or not exist at all.  If it does not exist,
             // we need to also create it, since we cannot gaurentee that SetProperty will be called prior
-            var models = _propertyModels.Where(o => o.GetType().GetProperties()
+            var models = m_propertyModels.Where(o => o.GetType().GetProperties()
                 .Where(p => p.Name == propertyName && p.PropertyType == typeof(T)).Any());
             if (models.Any())
             {
+                // property exists on model, retrieve it
                 var model = models.Single();
                 var prop = model.GetType().GetProperty(propertyName);
                 if (prop == null)
@@ -511,10 +370,11 @@ namespace WPFUtilities
             }
             else
             {
+                // property does not exist on model
                 object res;
-                if (!_properties.TryGetValue(propertyName, out res))
+                if (!m_properties.TryGetValue(propertyName, out res))
                 {
-                    _properties.Add(propertyName, default(T));
+                    m_properties.Add(propertyName, default(T));
                     return default(T);
                 }
 
@@ -527,13 +387,10 @@ namespace WPFUtilities
             }
 
             // invoke our delegates in the apropriate order
-            if (preceeding != null)
-                preceeding();
+            preceeding.SafeInvoke();
             T retVal = getValue();
-            if (following != null)
-                following(retVal);
-            if (modifier != null)
-                retVal = modifier(retVal);
+            following.SafeInvoke(retVal);
+            retVal = modifier.SafeInvoke(retVal);
             return retVal;
         }
 
@@ -665,10 +522,10 @@ namespace WPFUtilities
         {
             // find the command or create it if it doesn't exit
             RelayCommand res;
-            if (!_commands.TryGetValue(propertyName, out res))
+            if (!m_commands.TryGetValue(propertyName, out res))
             {
                 res = new RelayCommand(execute, canExecute);
-                _commands.Add(propertyName, res);
+                m_commands.Add(propertyName, res);
             }
 
             return res;

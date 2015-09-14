@@ -100,6 +100,7 @@
     <Compile Include="Debug\DebugTraceListener.cs" />
     <Compile Include="Extensions\EnumExtensions.cs" />
     <Compile Include="Extensions\ExpressionMethods.cs" />
+    <Compile Include="Extensions\DelegateExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BaseVM.cs" />
   </ItemGroup>
